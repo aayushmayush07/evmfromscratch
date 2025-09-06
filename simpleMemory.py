@@ -36,8 +36,8 @@ class Memory(SimpleMemory):
 
 
             memory_expansion_cost=expansion_size**2 #simplified 
-            super().store(offset,value)
-            return memory_expansion_cost       
+        super().store(offset,value)
+        return memory_expansion_cost       
 
 
 
