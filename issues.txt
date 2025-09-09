@@ -1,0 +1,1 @@
+in evm the first item is the divisor and second is the divedent

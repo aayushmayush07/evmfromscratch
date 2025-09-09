@@ -4,6 +4,18 @@
 UINT_256_MAX = 2**256 - 1
 UINT_255_NEGATIVE_ONE = UINT_256_MAX   # alias for clarity
 
+#Some constant for new idea of unsigned to signed
+WORD_BITS = 256
+MOD  = 2**256         # 2**256
+SIGN = 2**255
+
+def to_unsigned(x: int) -> int:
+    return x % MOD
+
+def to_signed(x: int) -> int:
+    return x - MOD if x >= SIGN else x
+
+
 # stop
 
 def stop(evm):
@@ -14,34 +26,48 @@ def stop(evm):
 # Math
 def add(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(a+b)
+    result = (a + b)%MOD
+    evm.stack.push(result)
     evm.pc += 1
-    evm.gas_dec(3)            
+    evm.gas_dec(3)
 
 def mul(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(a*b)
+    result = (a * b) % MOD  
+    evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(5)
+
 def sub(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(a-b)
+    evm.stack.push(a-b)%MOD
     evm.pc += 1
     evm.gas_dec(3)    
 
-def div(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(0 if b == 0 else a // b)
+def div(evm):  #it will give correct result for unsigned integer only so always use it when dealing with unsigned number
+    a, b = evm.stack.pop(), evm.stack.pop() #no need of modulo here because div cant overflow
+    result = 0 if b == 0 else a // b
+    evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(5)
 
-pos_or_neg = lambda number: -1 if number < 0 else 1    
+
+
 def sdiv(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
-    sign = pos_or_neg(a*b)
-    evm.stack.push(0 if b == 0 else sign * (abs(a) // abs(b)))
+    a, b = to_signed(a), to_signed(b)   # reinterpret inputs as signed
+
+    if b == 0:
+        result = 0
+    elif a == -(2**255) and b == -1:
+        result = -(2**255)  # special overflow case accroding to yellow paper
+    else:
+        result = int(a / b)   # truncates toward zero in Python 3
+
+    evm.stack.push(to_unsigned(result))  # back to unsigned form
     evm.pc += 1
     evm.gas_dec(5)
+
 def mod(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
     evm.stack.push(0 if b == 0 else a % b)
@@ -49,22 +75,31 @@ def mod(evm):
     evm.gas_dec(5)    
 def smod(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
-    sign = pos_or_neg(a*b)
-    evm.stack.push(0 if b == 0 else abs(a) % abs(b) * sign)
+    a, b = to_signed(a), to_signed(b)
+
+    if b == 0:
+        result = 0
+    else:
+        result = (abs(a) % abs(b)) * (1 if a >= 0 else -1)
+
+    evm.stack.push(to_unsigned(result))
     evm.pc += 1
-    evm.gas_dec(5)    
+    evm.gas_dec(5)
 def addmod(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
     N = evm.stack.pop()
-    evm.stack.push((a + b) % N)
+    result = 0 if N == 0 else (a + b) % N  #according to yellow paper 
+    evm.stack.push(result)
     evm.pc += 1
-    evm.gas_dec(8)    
+    evm.gas_dec(8)
 def mulmod(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
     N = evm.stack.pop()
-    evm.stack.push((a * b) % N)
+    result = 0 if N == 0 else (a * b) % N  #according to yellow paper 
+    evm.stack.push(result)
     evm.pc += 1
-    evm.gas_dec(8)    
+    evm.gas_dec(8)
+
 def size_in_bytes(number):
     import math
     if number == 0: return 1
@@ -74,9 +109,12 @@ def size_in_bytes(number):
 #exponent size increase when bytes increase 2**1000 cost more gas that 2**10 
 def exp(evm):
     a, exponent = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(a ** exponent)
+    result = pow(a, exponent, MOD)   # safe and efficient  
+    # result= (a**exponent)%MOD  same thing but less efficient
+    evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(10 + (50 * size_in_bytes(exponent)))
+
 def signextend(evm):
     b, x = evm.stack.pop(), evm.stack.pop()
     if b <= 31:
@@ -97,21 +135,21 @@ def lt(evm):
     evm.pc += 1
     evm.gas_dec(3)
 
-def unsigned_to_signed(value: int, bits: int = 256) -> int:
-    """
-    Convert unsigned int (0..2^bits-1) into signed int (-2^(bits-1)..2^(bits-1)-1)
-    using two's complement.
-    """
-    if value >= 2**(bits-1):
-        return value - 2**bits
-    else:
-        return value
+# def unsigned_to_signed(value: int, bits: int = 256) -> int:
+#     """
+#     Convert unsigned int (0..2^bits-1) into signed int (-2^(bits-1)..2^(bits-1)-1)
+#     using two's complement.
+#     """
+#     if value >= 2**(bits-1):
+#         return value - 2**bits
+#     else:
+#         return value
 
 
 def slt(evm): # signed less than
     a, b = evm.stack.pop(), evm.stack.pop()
-    a = unsigned_to_signed(a)
-    b = unsigned_to_signed(b)
+    a = to_signed(a)
+    b =to_signed(b)
     evm.stack.push(1 if a < b else 0)
     evm.pc += 1
     evm.gas_dec(3)
@@ -124,8 +162,8 @@ def gt(evm): # greater than
 
 def sgt(evm):
     a, b = evm.stack.pop(), evm.stack.pop()
-    a = unsigned_to_signed(a)
-    b = unsigned_to_signed(b)
+    a = to_signed(a)
+    b = to_signed(b)
     evm.stack.push(1 if a > b else 0)
     evm.pc += 1
     evm.gas_dec(3)
@@ -177,24 +215,28 @@ def byte(evm):
 
 def shl(evm): 
     shift, value = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(value << shift)
+    result=(value << shift)%MOD
+    evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(3)    
 def shr(evm): 
     shift, value = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(value >> shift)
+    result=(value >> shift)%MOD
+    evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(3)    
 def sar(evm):
     shift, value = evm.stack.pop(), evm.stack.pop()
+    signed_val = to_signed(value)   # interpret as signed
+
     if shift >= 256:
-        result = 0 if value >= 0 else UINT_255_NEGATIVE_ONE
+        result = 0 if signed_val >= 0 else -1
     else:
-        result = (value >> shift) & UINT_256_MAX
-        
-    evm.stack.push(result)
+        result = signed_val >> shift   # Python preserves sign on >>
+    
+    evm.stack.push(to_unsigned(result))
     evm.pc += 1
-    evm.gas_dec(3)    
+    evm.gas_dec(3)
 
 def sha3(evm):
     offset, size = evm.stack.pop(), evm.stack.pop()
@@ -371,3 +413,5 @@ def mstore8(evm):
     offset, value = evm.stack.pop(), evm.stack.pop()
     evm.memory.store(offset, value)
     evm.pc += 1    
+
+
