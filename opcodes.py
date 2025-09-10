@@ -250,18 +250,6 @@ def sha3(evm):
     dynamic_gas = 6 * minimum_word_size # TODO: + memory_expansion_cost
     evm.gas_dec(30 + dynamic_gas)    
 
-def sha3(evm):
-    offset, size = evm.stack.pop(), evm.stack.pop()
-    value = evm.memory.access(offset, size)
-    evm.stack.push(hash(str(value)))
-
-    evm.pc += 1
-
-    # calculate gas
-    minimum_word_size = (size + 31) / 32
-    dynamic_gas = 6 * minimum_word_size # TODO: + memory_expansion_cost
-    evm.gas_dec(30 + dynamic_gas)    
-
 def balance(evm):
     address = evm.stack.pop()
     evm.stack.push(99999999999)
@@ -292,7 +280,7 @@ def calldataload(evm):
     # always has to be 32 bytes
     # if its not we append 0x00 bytes until it is
     calldata = evm.calldata[i:i+32-delta]
-    calldata += 0x00*delta
+    calldata += b"\x00"*delta
 
     evm.stack.push(calldata)
     evm.pc += 1
@@ -308,7 +296,7 @@ def calldatacopy(evm):
     size = evm.stack.pop()
 
     calldata = evm.calldata[offset:offset+size]
-    memory_expansion_cost = evm.memory.store(destOffset, calldata)
+    memory_expansion_cost = evm.memory.store(destOffset, calldata) #this memory is equivalent to solidity memory, much like ram of evm
 
     static_gas = 3
     minimum_word_size = (size + 31) // 32
@@ -328,10 +316,12 @@ def codecopy(evm):
     size       = evm.stack.pop()
 
     code = evm.program[offset:offset+size]
+    if len(data) < size:
+        data = data + b"\x00" * (size - len(data))
     memory_expansion_cost = evm.memory.store(destOffset, code)
 
     static_gas = 3
-    minimum_word_size = (size + 31) / 32
+    minimum_word_size = (size + 31) // 32
     dynamic_gas = 3 * minimum_word_size + memory_expansion_cost
 
     evm.gas_dec(static_gas + dynamic_gas)
@@ -378,7 +368,8 @@ def returndatacopy(evm):
     dynamic_gas = 3 * minimum_word_size + memory_expansion_cost
 
     evm.gas_dec(3 + dynamic_gas)
-    evm.pc += 1    
+    evm.pc += 1   
+
 def extcodehash(evm):
     address = evm.stack.pop()
     evm.stack.push(0x00) # no code
@@ -407,11 +398,12 @@ def mload(evm):
 def mstore(evm): 
     # TODO: should be right aligned
     offset, value = evm.stack.pop(), evm.stack.pop()
+    
     evm.memory.store(offset, value)
     evm.pc += 1    
 def mstore8(evm): 
     offset, value = evm.stack.pop(), evm.stack.pop()
-    evm.memory.store(offset, value)
+    evm.memory.store(offset, value & 0xFF)   #one byte only as you said, so made rest bytes 0
     evm.pc += 1    
 
 

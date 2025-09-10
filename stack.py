@@ -1,5 +1,5 @@
 MAXIMUM_STACK_SIZE=1024
-
+MOD=1<<256  # it's anoother  way of saying 2**256 chill
 
 class Stack:
     def __init__(self): self.items=[]
@@ -22,8 +22,8 @@ class Stack:
         return "\n".join(ws)
 
     def push(self, value): 
-        if len(self.items) == MAXIMUM_STACK_SIZE-1: raise Exception("Stack overflow")
-        self.items.append(value%2**256)    
+        if len(self.items) >= MAXIMUM_STACK_SIZE: raise Exception("Stack overflow")
+        self.items.append(value%MOD)    
     
     def pop(self):
         if len(self.items) == 0: raise Exception("Stack underflow")

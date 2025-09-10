@@ -1,1 +1,10 @@
 in evm the first item is the divisor and second is the divedent
+
+
+the four important part of evm is 
+
+stack=empty where evm starts execution everytime
+
+memory= empty when evm starts execution everytime
+storage= contract state
+calldata=stored separately
