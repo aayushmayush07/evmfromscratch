@@ -1,3 +1,5 @@
+
+
 # %run utils.ipynb
 
 # import_notebooks(["utils.ipynb"])
@@ -8,7 +10,7 @@ UINT_255_NEGATIVE_ONE = UINT_256_MAX   # alias for clarity
 WORD_BITS = 256
 MOD  = 2**256         # 2**256
 SIGN = 2**255
-
+JUMPDEST=0x5B
 def to_unsigned(x: int) -> int:
     return x % MOD
 
@@ -25,27 +27,27 @@ def stop(evm):
 
 # Math
 def add(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
+    b,a = evm.stack.pop(), evm.stack.pop()
     result = (a + b)%MOD
     evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(3)
 
 def mul(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
+    b,a = evm.stack.pop(), evm.stack.pop()
     result = (a * b) % MOD  
     evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(5)
 
 def sub(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(a-b)%MOD
+    b,a = evm.stack.pop(), evm.stack.pop()
+    evm.stack.push(a-b%MOD)
     evm.pc += 1
     evm.gas_dec(3)    
 
 def div(evm):  #it will give correct result for unsigned integer only so always use it when dealing with unsigned number
-    a, b = evm.stack.pop(), evm.stack.pop() #no need of modulo here because div cant overflow
+    b,a = evm.stack.pop(), evm.stack.pop() #no need of modulo here because div cant overflow
     result = 0 if b == 0 else a // b
     evm.stack.push(result)
     evm.pc += 1
@@ -54,7 +56,7 @@ def div(evm):  #it will give correct result for unsigned integer only so always 
 
 
 def sdiv(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
+    b,a= evm.stack.pop(), evm.stack.pop()
     a, b = to_signed(a), to_signed(b)   # reinterpret inputs as signed
 
     if b == 0:
@@ -69,12 +71,12 @@ def sdiv(evm):
     evm.gas_dec(5)
 
 def mod(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
+    b,a = evm.stack.pop(), evm.stack.pop()
     evm.stack.push(0 if b == 0 else a % b)
     evm.pc += 1
     evm.gas_dec(5)    
 def smod(evm):
-    a, b = evm.stack.pop(), evm.stack.pop()
+    b,a = evm.stack.pop(), evm.stack.pop()
     a, b = to_signed(a), to_signed(b)
 
     if b == 0:
@@ -108,7 +110,7 @@ def size_in_bytes(number):
 
 #exponent size increase when bytes increase 2**1000 cost more gas that 2**10 
 def exp(evm):
-    a, exponent = evm.stack.pop(), evm.stack.pop()
+    exponent,a = evm.stack.pop(), evm.stack.pop()
     result = pow(a, exponent, MOD)   # safe and efficient  
     # result= (a**exponent)%MOD  same thing but less efficient
     evm.stack.push(result)
@@ -407,3 +409,111 @@ def mstore8(evm):
     evm.pc += 1    
 
 
+def sload(evm):
+    key=evm.stack.pop()
+    warm,value=evm.storage.load(key)
+    evm.stack.push(value)
+
+
+    # gas cost depends on warm/cold
+    if warm:
+        evm.gas_dec(100)
+    else:
+        evm.gas_dec(2100)
+
+    evm.pc += 1
+
+
+def sstore(evm):
+    key,value=evm.stack.pop(),evm.stack.pop()
+    warm,old_value=evm.storage.load(key)
+
+    base_dynamic_gas=0
+    evm.storage.store(key, value)
+
+    if value == old_value:
+        base_dynamic_gas = 0
+    elif old_value == 0 and value != 0:
+        base_dynamic_gas = 20000
+    else:
+        base_dynamic_gas = 5000 
+
+    access_cost = 100 if warm else 2100
+
+
+    evm.gas_dec(base_dynamic_gas + access_cost)
+
+    evm.pc += 1
+   # TODO: do refunds    
+
+def tload(evm):
+    key = evm.stack.pop()
+    warm, value = evm.tstorage.load(key)  
+    evm.stack.push(value)
+
+  
+    evm.gas_dec(100 if warm else 2100)
+
+    evm.pc += 1
+def tstore(evm): 
+    key, value = evm.stack.pop(), evm.stack.pop()
+    warm = evm.tstorage.store(key, value)
+    evm.gas_dec(100 if warm else 2100)
+
+    evm.pc += 1
+
+def jump(evm):
+    counter = evm.stack.pop()
+
+    # make sure that we jump to an JUMPDEST opcode
+    if not evm.program[counter] == JUMPDEST:
+        raise Exception("Can only jump to JUMPDEST")
+
+    evm.pc = counter
+    evm.gas_dec(8)
+def jumpi(evm):
+    counter, b = evm.stack.pop(), evm.stack.pop()
+
+    if b != 0: evm.pc = counter
+    else     : evm.pc += 1
+    
+    evm.gas_dec(10)    
+def pc(evm):
+    evm.stack.push(evm.pc)
+    evm.pc += 1
+    evm.gas_dec(2)    
+def jumpdest(evm):
+    evm.pc += 1
+    evm.gas_dec(1)  
+
+
+def _push(evm, n):
+    evm.pc += 1
+    evm.gas_dec(3)
+    
+    value = []
+    for _ in range(n):
+        value.append(evm.peek())
+        evm.pc += 1
+    evm.stack.push(int(''.join(map(str, value))))      
+
+def _dup(evm, n):
+    # make sure stack is big enough!
+    value = evm.stack[n]
+    evm.stack.push(value)
+
+    evm.pc += 1
+    evm.gas_dec(3)    
+
+
+
+def _swap(evm, n):
+    # swap top (index 0) with nth item from top (index n)
+    value1 = evm.stack.items[-1]       # top of stack
+    value2 = evm.stack.items[-(n+1)]   # nth item (1-based)
+
+    evm.stack.items[-1] = value2
+    evm.stack.items[-(n+1)] = value1
+
+    evm.pc += 1
+    evm.gas_dec(3)    

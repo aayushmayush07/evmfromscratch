@@ -9,20 +9,16 @@ class KeyValue:
         self.storage[key]=value
 
 
-
-class Storage(KeyValue):
+class TStorage(KeyValue):
     def __init__(self):
         super().__init__()
-        self.cache=[]
+        self.cache = []  # warm set 
 
-
-    def load(self,key):
-        warm=True if key in self.cache else False
-
+    def load(self, key):
+        warm = key in self.cache
         if not warm: self.cache.append(key)
-        if key not in self.storage:return warm,0x00  #since sload it's asking for bot
-        return warm,super.load(key)    
-
+        if key not in self.storage:return warm, 0x00
+        return warm, super().load(key)
 
     def store(self, key, value):
         warm = key in self.cache
@@ -30,3 +26,9 @@ class Storage(KeyValue):
             self.cache.append(key)
         self.storage[key] = value
         return warm
+
+    def reset(self):
+        # wipe I have done to clear at the end of transaction
+        self.storage.clear()
+        self.cache.clear()
+
