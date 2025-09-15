@@ -5,7 +5,7 @@ from opcodes import *
 
 from opcodes import _push, _dup, _swap ,_and,_xor,_not,_or,_pop  # works even with underscores
 
-from log import Log
+# from log import Log
 from keyvalueTransientStorage import KeyValue,TStorage
 from opnames import *
 

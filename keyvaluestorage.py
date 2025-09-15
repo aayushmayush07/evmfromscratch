@@ -24,9 +24,9 @@ class Storage(KeyValue):
         return warm,super.load(key)    
 
 
-    def store(self, key, value):
-        warm = key in self.cache
-        if not warm:
-            self.cache.append(key)
-        self.storage[key] = value
-        return warm
+    # def store(self, key, value):
+    #     warm = key in self.cache
+    #     if not warm:
+    #         self.cache.append(key)
+    #     self.storage[key] = value
+    #     return warm

@@ -27,27 +27,28 @@ def stop(evm):
 
 # Math
 def add(evm):
-    b,a = evm.stack.pop(), evm.stack.pop()
+    a,b = evm.stack.pop(), evm.stack.pop()
     result = (a + b)%MOD
     evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(3)
 
 def mul(evm):
-    b,a = evm.stack.pop(), evm.stack.pop()
+    a,b = evm.stack.pop(), evm.stack.pop()
     result = (a * b) % MOD  
     evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(5)
 
 def sub(evm):
-    b,a = evm.stack.pop(), evm.stack.pop()
-    evm.stack.push(a-b%MOD)
+    a,b = evm.stack.pop(), evm.stack.pop()
+    result=(a-b)%MOD
+    evm.stack.push(result)
     evm.pc += 1
     evm.gas_dec(3)    
 
 def div(evm):  #it will give correct result for unsigned integer only so always use it when dealing with unsigned number
-    b,a = evm.stack.pop(), evm.stack.pop() #no need of modulo here because div cant overflow
+    a,b = evm.stack.pop(), evm.stack.pop() #no need of modulo here because div cant overflow
     result = 0 if b == 0 else a // b
     evm.stack.push(result)
     evm.pc += 1
@@ -56,27 +57,27 @@ def div(evm):  #it will give correct result for unsigned integer only so always 
 
 
 def sdiv(evm):
-    b,a= evm.stack.pop(), evm.stack.pop()
+    a,b= evm.stack.pop(), evm.stack.pop()
     a, b = to_signed(a), to_signed(b)   # reinterpret inputs as signed
 
     if b == 0:
         result = 0
     elif a == -(2**255) and b == -1:
-        result = -(2**255)  # special overflow case accroding to yellow paper
+        result = -(2**255)  #  case accroding to yellow paper
     else:
-        result = int(a / b)   # truncates toward zero in Python 3
+        result = int(a / b)   # truncates toward Zeroo in Python 3
 
-    evm.stack.push(to_unsigned(result))  # back to unsigned form
+    evm.stack.push(to_unsigned(result))  # unsigned form
     evm.pc += 1
     evm.gas_dec(5)
 
 def mod(evm):
-    b,a = evm.stack.pop(), evm.stack.pop()
+    a,b = evm.stack.pop(), evm.stack.pop()
     evm.stack.push(0 if b == 0 else a % b)
     evm.pc += 1
     evm.gas_dec(5)    
 def smod(evm):
-    b,a = evm.stack.pop(), evm.stack.pop()
+    a,b = evm.stack.pop(), evm.stack.pop()
     a, b = to_signed(a), to_signed(b)
 
     if b == 0:
@@ -110,7 +111,7 @@ def size_in_bytes(number):
 
 #exponent size increase when bytes increase 2**1000 cost more gas that 2**10 
 def exp(evm):
-    exponent,a = evm.stack.pop(), evm.stack.pop()
+    a,exponent = evm.stack.pop(), evm.stack.pop()
     result = pow(a, exponent, MOD)   # safe and efficient  
     # result= (a**exponent)%MOD  same thing but less efficient
     evm.stack.push(result)
@@ -488,14 +489,16 @@ def jumpdest(evm):
 
 
 def _push(evm, n):
-    evm.pc += 1
+    evm.pc += 1                 
     evm.gas_dec(3)
-    
-    value = []
+
+    value = 0
     for _ in range(n):
-        value.append(evm.peek())
+        value = (value << 8) | evm.peek()
         evm.pc += 1
-    evm.stack.push(int(''.join(map(str, value))))      
+
+    evm.stack.push(value % MOD) # enforce 256-bit wraparound
+   
 
 def _dup(evm, n):
     # make sure stack is big enough!
