@@ -100,3 +100,5 @@ It’s meant to help developers understand:
 * Edge cases like overflows, signed math, division by zero
 * The stack / memory / storage model
 
+
+> 💡 Inspired by and credits to [@shafu](https://github.com/shafu0x) — [evm-from-scratch.app](https://www.evm-from-scratch.app)  
