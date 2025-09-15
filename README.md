@@ -1,12 +1,14 @@
-```markdown
 # 🌑 **EVM From Scratch 🛠️**
+
 
 An Python implementation of the Mini Ethereum Virtual Machine (EVM), built from scratch.  
 The goal is to deeply understand how EVM opcodes, stack, memory, and storage interact by re-implementing them in Python.
 
----
 
+
+---
 ## ✨ Features
+
 
 - Stack-based architecture (`stack.py`)  
 
@@ -21,11 +23,10 @@ The goal is to deeply understand how EVM opcodes, stack, memory, and storage int
 - Example runner (`main.py`) to load programs and inspect results  
 
 ---
-
 ## 📂 Project Structure
 
 
-
+```
 .
 ├── main.py                     # Entry point (loads EVM with a test program)
 
