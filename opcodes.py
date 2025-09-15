@@ -1,8 +1,6 @@
 
+# opcodes.py
 
-# %run utils.ipynb
-
-# import_notebooks(["utils.ipynb"])
 UINT_256_MAX = 2**256 - 1
 UINT_255_NEGATIVE_ONE = UINT_256_MAX   # alias for clarity
 

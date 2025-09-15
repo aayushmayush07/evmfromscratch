@@ -1,3 +1,5 @@
+# opnames.py
+
 STOP = 0x0
 
 

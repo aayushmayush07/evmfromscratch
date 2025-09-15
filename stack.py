@@ -1,3 +1,5 @@
+# stack.py
+
 MAXIMUM_STACK_SIZE=1024
 MOD=1<<256  # it's anoother  way of saying 2**256 chill
 

@@ -1,3 +1,4 @@
+# log.py
 class Log:
     def __init__(self,data,topic1=None,topic2=None,topic3=None,topic4=None):
         self.data=data

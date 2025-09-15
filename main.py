@@ -1,3 +1,5 @@
+# main.py
+
 from evm import EVM
 from bytecodes import *
 
@@ -6,7 +8,7 @@ from bytecodes import *
 
 GAS=21_000
 
-# evm=EVM(SIMPLE_ADD,GAS,0)
+evm=EVM(SIMPLE_ADD,GAS,0)
 # evm=EVM(SIMPLE_SUB,GAS,0)
 # evm=EVM(SIMPLE_MUL,GAS,0)
 # evm=EVM(SIMPLE_DIV,GAS,0)
@@ -24,7 +26,7 @@ GAS=21_000
 # evm=EVM(EXP_OVERFLOW,GAS,0)
 # evm=EVM(ADDMOD_SIMPLE,GAS,0)
 # evm=EVM(ADDMOD_ZERO_MOD,GAS,0)
-evm=EVM(ADDMOD_OVERFLOW_10,GAS,0)
+# evm=EVM(ADDMOD_OVERFLOW_10,GAS,0)
 
 
 evm.run()
